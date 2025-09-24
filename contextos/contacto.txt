@@ -1,0 +1,9 @@
+Proporciona la información de contacto textual del hotel según los datos disponibles: teléfono, correo, dirección, WhatsApp, redes sociales.
+
+Ejemplo:
+"Teléfono: 51 964 954 496
+Correo: escobedomichael921@gmail.com
+Dirección: OTUZCO - LA LIBERTAD
+WhatsApp: https://wa.me/964954496"
+
+No añadas prefijos como "mailto:", ni adornes con frases genéricas.
