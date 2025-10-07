@@ -144,7 +144,7 @@ if (!isset($_SESSION['chat_history'])) {
 $historial_str = implode("\n", $_SESSION['chat_history']);
 
 // Configuración y construcción del prompt
-define("GEMINI_API_KEY", "AIzaSyCytdw5lEpqkjGiFSCyOhzol2Kxf4QBrf8"); // ¡USA VARIABLES DE ENTORNO EN PRODUCCIÓN!
+define("GEMINI_API_KEY", ""); // ¡USA VARIABLES DE ENTORNO EN PRODUCCIÓN!
 define("GEMINI_MODEL", "gemini-2.0-flash"); // Modelo actualizado
 $master_context = generarMasterContext($conexion);
 $master_context = str_replace('{{FECHA_ACTUAL}}', date('Y-m-d'), $master_context);
