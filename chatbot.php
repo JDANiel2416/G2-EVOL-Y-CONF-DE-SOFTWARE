@@ -1,17 +1,23 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1); 
+ini_set('display_errors', 1); // Temporalmente en 1 para ver todos los avisos
+ini_set('display_startup_errors', 1); // Temporalmente en 1
 error_reporting(E_ALL);
 
 // Dependencias
 require_once "db.php";
 require_once "contextos/master-context.php";
 
-
+// =================================================================
 // --- HERRAMIENTAS DEL BOT ---
+// =================================================================
 
+/**
+ * CORREGIDO: Función para verificar disponibilidad usando la nueva estructura de BD.
+ * Ahora utiliza un JOIN para obtener datos de 'categorias'.
+ */
 function verificarDisponibilidad($conexion, $fecha_inicio, $fecha_fin, $tipo_habitacion = null)
 {
+    // La subconsulta para obtener IDs de habitaciones ocupadas sigue siendo correcta.
     $subquery = "SELECT DISTINCT id_habitacion FROM reservas WHERE fecha_salida > ? AND fecha_ingreso < ?";
     $stmt_ocupadas = $conexion->prepare($subquery);
     if (!$stmt_ocupadas) return [];
@@ -24,17 +30,18 @@ function verificarDisponibilidad($conexion, $fecha_inicio, $fecha_fin, $tipo_hab
     }
     $stmt_ocupadas->close();
 
+    // --- CAMBIO CLAVE: La consulta principal ahora usa un JOIN ---
     $query = "SELECT 
                     h.id, 
-                    c.categoria,
+                    c.categoria, -- Se obtiene 'categoria' de la tabla 'categorias'
                     h.capacidad, 
-                    c.precio
+                    c.precio     -- Se obtiene 'precio' de la tabla 'categorias'
                 FROM 
                     habitaciones h
                 JOIN 
                     categorias c ON h.id_categoria = c.id
                 WHERE 
-                    h.estado = 1 AND c.estado = 1";
+                    h.estado = 1 AND c.estado = 1"; // Se buscan habitaciones y categorías activas
 
     $params = [];
     $types = "";
@@ -47,13 +54,14 @@ function verificarDisponibilidad($conexion, $fecha_inicio, $fecha_fin, $tipo_hab
     }
 
     if ($tipo_habitacion) {
+        // La condición ahora es sobre 'c.categoria'
         $query .= " AND c.categoria LIKE ?";
         $tipo_habitacion_limpio = str_replace(['habitación', 'habitacion'], '', $tipo_habitacion);
         $params[] = "%" . trim($tipo_habitacion_limpio) . "%";
         $types .= "s";
     }
 
-    $query .= " ORDER BY c.precio ASC";
+    $query .= " ORDER BY c.precio ASC"; // Ordenamos por el precio de la categoría
     $stmt_disponibles = $conexion->prepare($query);
 
     if (!$stmt_disponibles) return [];
@@ -106,9 +114,12 @@ function limpiarRespuesta($respuesta) {
 }
 
 
+// =================================================================
 // --- LÓGICA PRINCIPAL ---
+// =================================================================
 session_start();
 
+// Determinar el ID de usuario para la base de datos (NULL si es anónimo)
 $db_user_id = "NULL";
 if (isset($_SESSION['user_id']) && is_numeric($_SESSION['user_id'])) {
     $db_user_id = (int)$_SESSION['user_id'];
@@ -120,20 +131,21 @@ if (empty($mensaje)) {
     exit;
 }
 
+// Guardar mensaje del usuario en la BD (ahora funciona para todos)
 $mensaje_esc = $conexion->real_escape_string($mensaje);
 $insert_query = "INSERT INTO historial_chat (user_id, mensaje_usuario, respuesta_bot) VALUES ($db_user_id, '$mensaje_esc', '')";
 $conexion->query($insert_query);
 $last_insert_id = $conexion->insert_id;
 
+// CORREGIDO: Usar historial de sesión para darle memoria al bot con TODOS los usuarios
 if (!isset($_SESSION['chat_history'])) {
     $_SESSION['chat_history'] = [];
 }
 $historial_str = implode("\n", $_SESSION['chat_history']);
 
 // Configuración y construcción del prompt
-define("GEMINI_API_KEY", ""); // ¡USA VARIABLES DE ENTORNO EN PRODUCCIÓN!
+define("GEMINI_API_KEY", "AIzaSyCytdw5lEpqkjGiFSCyOhzol2Kxf4QBrf8"); // ¡USA VARIABLES DE ENTORNO EN PRODUCCIÓN!
 define("GEMINI_MODEL", "gemini-2.0-flash"); // Modelo actualizado
-
 $master_context = generarMasterContext($conexion);
 $master_context = str_replace('{{FECHA_ACTUAL}}', date('Y-m-d'), $master_context);
 
@@ -170,6 +182,7 @@ if (preg_match('/\{.*\}/s', $respuesta_limpia, $matches)) {
 
 $respuesta_final = "";
 
+// ¿La acción es una llamada a herramienta válida?
 if ($datos_herramienta && isset($datos_herramienta['tool_name']) && $datos_herramienta['tool_name'] === 'verificar_disponibilidad') {
     
     // FASE 2: Ejecutar la herramienta y formular la respuesta final
@@ -183,7 +196,7 @@ if ($datos_herramienta && isset($datos_herramienta['tool_name']) && $datos_herra
     } else {
         $resultado_sistema = "Resultado de la consulta: Sí hay disponibilidad. Habitaciones encontradas:\n";
         foreach ($disponibles as $hab) {
-            // CORRECCIÓN: Se usa 'categoria' en lugar de 'estilo'
+            // CORREGIDO: Se usa 'categoria' en lugar de 'estilo'
             $resultado_sistema .= "- {$hab['categoria']} (Precio: S/{$hab['precio']} por noche)\n";
         }
     }
@@ -203,20 +216,21 @@ PROMPT;
     $respuesta_final = llamarAGemini($prompt_fase2);
 
 } else {
-
+    // Si no es una llamada a herramienta, la respuesta limpia es la respuesta final.
     $respuesta_final = $respuesta_limpia;
 }
 
-
+// Limpieza final de la respuesta antes de guardarla y mostrarla
 $respuesta_final = limpiarRespuesta($respuesta_final);
 
-
+// Guardar en memoria de sesión para la próxima interacción
 $_SESSION['chat_history'][] = "Usuario: " . $mensaje;
 $_SESSION['chat_history'][] = "Bot: " . $respuesta_final;
-if (count($_SESSION['chat_history']) > 8) { 
+if (count($_SESSION['chat_history']) > 8) { // Mantenemos solo las últimas 4 interacciones
     $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -8);
 }
 
+// Guardar respuesta final en la BD y mostrarla
 $respuesta_esc = $conexion->real_escape_string($respuesta_final);
 $conexion->query("UPDATE historial_chat SET respuesta_bot = '$respuesta_esc' WHERE id = $last_insert_id");
 

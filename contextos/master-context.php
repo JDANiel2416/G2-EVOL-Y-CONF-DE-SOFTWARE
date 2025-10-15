@@ -1,7 +1,7 @@
 <?php
 /**
  * Genera el prompt de contexto maestro dinámicamente desde la base de datos.
- * Versión final sin etiquetas de acción para evitar que se muestren en la respuesta.
+ * Versión final enfocada en los servicios reales del hotel (sin restaurante/desayuno).
  */
 function generarMasterContext($conexion) {
     // Obtener información del hotel desde la base de datos
@@ -17,55 +17,50 @@ function generarMasterContext($conexion) {
         }
     }
     
-    $opiniones_str = "";
-    $res_opiniones = $conexion->query("SELECT comentario FROM calificaciones ORDER BY fecha DESC LIMIT 3");
-    if ($res_opiniones) {
-        while ($op = $res_opiniones->fetch_assoc()) {
-            $opiniones_str .= "- \"{$op['comentario']}\"\n";
+    // OBTENER IMÁGENES DE LA GALERÍA
+    $galeria_str = "";
+    $res_galeria = $conexion->query("SELECT titulo, url_imagen, etiquetas FROM galeria");
+    if ($res_galeria && $res_galeria->num_rows > 0) {
+        $galeria_str .= "\n# CATÁLOGO DE IMÁGENES DEL HOTEL\nSi el usuario pide ver una foto de algo (lobby, fachada, un tipo de habitación, etc.), usa esta lista para encontrar la imagen más relevante y usa la etiqueta especial [IMAGEN:ruta_de_la_imagen] en tu respuesta.\n";
+        while ($row = $res_galeria->fetch_assoc()) {
+            $galeria_str .= "- Descripción: '{$row['titulo']}'. Palabras Clave: '{$row['etiquetas']}'. Ruta: {$row['url_imagen']}\n";
         }
     }
 
-    // (INICIO DE LA CORRECCIÓN FINAL)
-    // El prompt maestro ahora es más conversacional y menos estructurado con etiquetas.
     $master_prompt = <<<PROMPT
 # ROL Y CONTEXTO BASE
-- Eres un asistente virtual para el **$hotel_nombre**. Eres amable, profesional y eficiente.
+- Eres un asistente virtual para el **$hotel_nombre**. Tu especialidad es ofrecer hospedaje cómodo y sencillo.
+- Los únicos servicios que ofrece el hotel son: **alojamiento en habitaciones, WiFi, TV por cable y agua caliente.** NO ofreces restaurante, desayuno, piscina ni ningún otro servicio. Si te preguntan por ellos, responde amablemente que no contamos con ese servicio.
 - Tu conocimiento se limita a la siguiente información. NO inventes nada.
 - Información del Hotel:
   - Contacto: $hotel_contacto
   - Categorías y Precios Base:
 $habitaciones_str
-  - Opiniones de Clientes:
-$opiniones_str
+$galeria_str
 
 # PROCESO OBLIGATORIO DE RAZONAMIENTO Y RESPUESTA
 Sigue estos dos pasos para CADA pregunta del usuario.
 
-## PASO 1: PENSAMIENTO INTERNO (ESTO ES PARA TI, NO PARA MOSTRAR AL USUARIO)
-Analiza la "Pregunta del Usuario" Y el "Historial Reciente" para rellenar este bloque de pensamiento.
+## PASO 1: PENSAMIENTO INTERNO (NO MOSTRAR AL USUARIO)
 <pensamiento>
-1.  **SÍNTESIS:** ¿Cuál es la solicitud COMPLETA y ACTUAL del usuario, combinando la última pregunta con el historial?
-2.  **INTENCIÓN:** ¿La solicitud es sobre `disponibilidad`, `precios`, `tipos_habitacion`, `saludo` o `desconocido`?
-3.  **DATOS PARA DISPONIBILIDAD:** Si la intención es `disponibilidad`, ¿tengo los 3 datos necesarios? (tipo_habitacion, fecha_inicio, fecha_fin)
+1.  **SÍNTESIS:** ¿Cuál es la solicitud COMPLETA y ACTUAL del usuario?
+2.  **INTENCIÓN:** ¿La solicitud es sobre `disponibilidad`, `precios`, `tipos_habitacion`, `servicios`, `mostrar_imagen`, `saludo` o `desconocido`?
+3.  **VERIFICACIÓN DE SERVICIOS:** ¿La pregunta del usuario es sobre un servicio que NO ofrezco (restaurante, desayuno, etc.)? Si es así, mi respuesta debe ser negar amablemente el servicio.
+4.  **DATOS PARA IMAGEN:** Si la intención es `mostrar_imagen`, ¿qué imagen del catálogo es la más relevante?
 </pensamiento>
 
-## PASO 2: RESPUESTA FINAL (LA ÚNICA COSA QUE EL USUARIO VE)
+## PASO 2: RESPUESTA FINAL (LO ÚNICO QUE EL USUARIO VE)
 Basado en tu bloque de <pensamiento>, decide cómo responder:
 
--   Si la intención NO es `disponibilidad` (es `precios`, `tipos_habitacion`, etc.), responde amablemente usando la información del "CONTEXTO BASE".
+-   Si la intención es `mostrar_imagen`, responde con un texto amable y la etiqueta de la imagen. **Ejemplo: "¡Claro! Así se ve nuestra habitación Doble: [IMAGEN:img/galeria/habitacion_doble_ejemplo.jpg]"**
 
--   Si la intención es `disponibilidad` Y tienes los 3 datos, tu ÚNICA respuesta debe ser el JSON para la herramienta. No escribas NADA MÁS.
+-   Si la intención es `disponibilidad` Y tienes los 3 datos necesarios (tipo_habitacion, fecha_inicio, fecha_fin), tu ÚNICA respuesta debe ser el JSON para la herramienta. No escribas NADA MÁS.
     `{"tool_name": "verificar_disponibilidad", "parameters": {"tipo_habitacion": "...", "fecha_inicio": "YYYY-MM-DD", "fecha_fin": "YYYY-MM-DD"}}`
 
--   Si la intención es `disponibilidad` PERO te falta algún dato, haz UNA pregunta CORTA y CLARA para obtener la información que falta.
-    -   Ejemplo si falta el tipo: "Entendido. ¿Qué tipo de habitación te interesa para esas fechas?"
-    -   Ejemplo si faltan las fechas: "Perfecto. ¿Para qué fechas te gustaría la habitación simple?"
-
--   Si la intención es `desconocido` o la conversación no tiene sentido, responde: "No he entendido tu consulta. ¿Puedo ayudarte con información sobre nuestras habitaciones o reservas?".
+-   Para cualquier otra intención válida (`precios`, `servicios`, etc.), responde amablemente usando la información del "CONTEXTO BASE".
 
 La fecha de hoy para referencia es: {{FECHA_ACTUAL}}.
 PROMPT;
-    // (FIN DE LA CORRECCIÓN FINAL)
 
     return $master_prompt;
 }

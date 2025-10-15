@@ -44,7 +44,6 @@ sendBtn.addEventListener('click', sendMessage);
 
 // Quick questions
 document.addEventListener('click', function(e) {
-    // Traverse up the DOM to find the button, useful for clicks on the icon inside
     const button = e.target.closest('.quick-question');
     if (button) {
         const question = button.getAttribute('data-question');
@@ -62,18 +61,14 @@ function sendMessage() {
     
     if (!message || isTyping) return;
     
-    // Add user message
     addMessage(message, 'user');
     
-    // Clear input
     userInput.value = '';
     userInput.style.height = 'auto';
     sendBtn.disabled = true;
     
-    // Show typing indicator
     showTypingIndicator();
     
-    // Send to server (replace with your backend endpoint)
     fetch('chatbot.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -91,6 +86,7 @@ function sendMessage() {
     });
 }
 
+// --- FUNCIÓN MODIFICADA PARA MANEJAR IMÁGENES ---
 function addMessage(content, sender, isError = false) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message-animation';
@@ -100,12 +96,26 @@ function addMessage(content, sender, isError = false) {
         minute: '2-digit' 
     });
     
+    // <-- CAMBIO/AÑADIDO: Lógica para procesar el contenido del bot
+    let finalContent = content;
+    if (sender === 'bot') {
+        // Expresión regular para buscar nuestra etiqueta [IMAGEN:...]
+        const regexImagen = /\[IMAGEN:(.*?)\]/g;
+        // Reemplazamos la etiqueta por un tag <img> de HTML
+        finalContent = content.replace(regexImagen, (match, url) => {
+            const imageUrl = url.trim();
+            // Devolvemos el HTML de la imagen. La clase es para el CSS.
+            return `<img src="${imageUrl}" class="chat-image" alt="Vista del hotel" loading="lazy">`;
+        });
+    }
+    // <-- FIN DEL CAMBIO
+
     if (sender === 'user') {
         messageDiv.innerHTML = `
             <div class="flex items-start space-x-3 mb-6 justify-end">
                 <div class="flex-1 min-w-0 flex flex-col items-end">
                     <div class="bg-primary-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg">
-                        <p>${content}</p>
+                        <p>${content}</p> 
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 mr-2">${time}</div>
                 </div>
@@ -122,17 +132,19 @@ function addMessage(content, sender, isError = false) {
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="bg-white dark:bg-gray-800 ${isError ? 'border-red-200 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'} rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border max-w-xs sm:max-w-md lg:max-w-lg">
-                        <p class="${isError ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}">${content}</p>
+                        <div class="${isError ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}">${finalContent.replace(/\n/g, '<br>')}</div>
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-2">${time}</div>
                 </div>
             </div>
         `;
+        // <-- CAMBIO: Usamos `finalContent` y lo envolvemos en un div en lugar de un <p> para permitir HTML (como <img>)
     }
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
 
 function showTypingIndicator() {
     isTyping = true;
@@ -194,10 +206,6 @@ function clearChat() {
                                 <button class="quick-question bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-full text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors" data-question="¿Cómo puedo contactar al hotel?">
                                     <i class="fas fa-phone mr-1"></i>
                                     Contacto
-                                </button>
-                                <button class="quick-question bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-full text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors" data-question="¿Qué calificaciones tiene el hotel?">
-                                    <i class="fas fa-star mr-1"></i>
-                                    Calificaciones
                                 </button>
                             </div>
                         </div>
