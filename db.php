@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$conexion = new mysqli("127.0.0.1", "root", "", "ai_reservas", 3307);
+$conexion = new mysqli("localhost", "root", "", "reservas", 3306);
 if ($conexion->connect_error) {
     // En lugar de die(), que detiene todo, podemos hacer esto para ver el error:
     echo "ERROR DE CONEXIÓN EN DB.PHP: " . $conexion->connect_error . "<br>";
