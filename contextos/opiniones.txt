@@ -1,5 +1,0 @@
-Si hay comentarios disponibles, cítalos literalmente. Puedes introducirlos con frases como: "Aquí tienes algunas opiniones de nuestros huéspedes:"
-
-Si no hay comentarios, informa directamente al usuario: "Actualmente no tenemos comentarios disponibles para mostrar."
-
-No resumas ni inventes opiniones. No menciones plataformas externas como Booking o Google Reviews.
