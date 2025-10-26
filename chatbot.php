@@ -297,7 +297,7 @@ if ($res_historial && $res_historial->num_rows > 0) {
 }
 
 // Configuración y construcción del prompt
-define("GEMINI_API_KEY", "AIzaSyAdo1i2V1qKC5sxzPARMQqVzFk-hiSs5Ek");
+define("GEMINI_API_KEY", "");
 define("GEMINI_MODEL", "gemini-1.5-flash");
 $master_context = generarMasterContext($conexion);
 $master_context = str_replace('{{FECHA_ACTUAL}}', date('Y-m-d'), $master_context);

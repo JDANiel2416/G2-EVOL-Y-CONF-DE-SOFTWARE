@@ -1,5 +1,4 @@
 <?php
-// En api/chat/get_history.php
 header("Content-Type: application/json; charset=UTF-8");
 
 require_once '../../app/core/db.php';
@@ -19,8 +18,7 @@ if (isset($_SESSION['user_id']) && is_numeric($_SESSION['user_id'])) {
 }
 
 if (!empty($historial_condition)) {
-    // --- CONSULTA SQL CORREGIDA ---
-    // Esta consulta ahora obtiene los ÚLTIMOS 20 mensajes y los ordena correctamente.
+
     $query = "
         SELECT * FROM (
             SELECT mensaje_usuario, respuesta_bot, fecha 
