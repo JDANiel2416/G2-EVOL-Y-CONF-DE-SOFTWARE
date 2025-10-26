@@ -1,3 +1,0 @@
-No se ha detectado una intención clara. Pide al usuario que aclare si busca información sobre reservas, disponibilidad, precios, tipos de habitación o contacto.
-
-Ejemplo: "¿Podrías indicarme si deseas saber sobre precios, disponibilidad o tipos de habitaciones? Estoy aquí para ayudarte."

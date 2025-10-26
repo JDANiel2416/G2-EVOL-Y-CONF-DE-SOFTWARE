@@ -1,0 +1,164 @@
+.message-animation {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.typing-dots span {
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Custom scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.8);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(75, 85, 99, 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(75, 85, 99, 0.8);
+}
+
+.chat-image {
+    max-width: 90%;
+    border-radius: 10px;
+    margin-top: 8px;
+    border: 1px solid #eee;
+    display: block;
+}
+
+/* =============================================== */
+/* --- ESTILOS PARA FORMULARIOS DENTRO DEL CHAT (v3 - COMPACTO) --- */
+/* =============================================== */
+
+.chat-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* 8px de espacio entre cada grupo */
+}
+
+.chat-form-container .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-form-container label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4B5563;
+    margin-bottom: 4px; /* Espacio mínimo entre label e input */
+}
+.dark .chat-form-container label { color: #D1D5DB; }
+
+.chat-form-container input[type="text"],
+.chat-form-container input[type="email"],
+.chat-form-container input[type="password"] {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 0.375rem;
+    background-color: #FFFFFF;
+    color: #111827;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+.dark .chat-form-container input[type="text"],
+.dark .chat-form-container input[type="email"],
+.dark .chat-form-container input[type="password"] {
+    background-color: #374151;
+    border-color: #4B5563;
+    color: #F9FAFB;
+}
+.chat-form-container input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5);
+}
+.chat-form-container input[readonly] {
+    background-color: #F3F4F6;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.dark .chat-form-container input[readonly] { background-color: #1F2937; }
+
+.password-requirements {
+    font-size: 0.75rem;
+    color: #6B7280;
+    padding-left: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-top: 0.25rem;
+}
+.dark .password-requirements { color: #9CA3AF; }
+.password-requirements p { display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s; }
+.password-requirements .invalid { color: #EF4444; }
+.password-requirements .valid { color: #10B981; text-decoration: line-through; opacity: 0.7; }
+
+#password-match-msg { font-size: 0.75rem; min-height: 1rem; margin-top: 0.25rem; }
+#password-match-msg.valid { color: #10B981; }
+#password-match-msg.invalid { color: #EF4444; }
+
+.form-condition { display: flex; align-items: center; gap: 0.5rem; }
+.form-condition a { color: #10B981; text-decoration: underline; }
+.form-condition input[type="checkbox"] { height: 1rem; width: 1rem; }
+
+.chat-form-container .default-btn {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background-color: #10B981;
+    color: white;
+    font-weight: 600;
+    border: none;
+    transition: background-color 0.2s;
+}
+.chat-form-container .default-btn:hover { background-color: #059669; }
+.chat-form-container .default-btn:disabled { background-color: #9CA3AF; cursor: not-allowed; }
+.dark .chat-form-container .default-btn:disabled { background-color: #4B5563; }
+
+#form-timer, #dni-attempts-msg {
+    font-size: 0.75rem;
+    color: #6B7280;
+    text-align: center;
+    margin-top: 0.25rem;
+}
+.dark #form-timer, .dark #dni-attempts-msg { color: #9CA3AF; }

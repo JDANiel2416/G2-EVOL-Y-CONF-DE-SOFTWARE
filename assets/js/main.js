@@ -3,17 +3,12 @@ let isTyping = false;
 // Theme management
 const themeToggle = document.getElementById('theme-toggle');
 const htmlElement = document.documentElement;
-
-// Check for saved theme preference or default to 'light'
 const currentTheme = localStorage.getItem('theme') || 'light';
-
 if (currentTheme === 'dark') {
     htmlElement.classList.add('dark');
 }
-
-themeToggle.addEventListener('click', function() {
+themeToggle.addEventListener('click', function () {
     htmlElement.classList.toggle('dark');
-    
     const theme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
     localStorage.setItem('theme', theme);
 });
@@ -25,14 +20,14 @@ const chatMessages = document.getElementById('chat-messages');
 const clearChatBtn = document.getElementById('clear-chat');
 
 // Auto-resize textarea
-userInput.addEventListener('input', function() {
+userInput.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 128) + 'px';
     sendBtn.disabled = !this.value.trim();
 });
 
 // Send message on Enter
-userInput.addEventListener('keydown', function(e) {
+userInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
@@ -43,7 +38,7 @@ userInput.addEventListener('keydown', function(e) {
 sendBtn.addEventListener('click', sendMessage);
 
 // Quick questions
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const button = e.target.closest('.quick-question');
     if (button) {
         const question = button.getAttribute('data-question');
@@ -58,17 +53,16 @@ clearChatBtn.addEventListener('click', clearChat);
 
 function sendMessage() {
     const message = userInput.value.trim();
-    
     if (!message || isTyping) return;
-    
-    addMessage(message, 'user');
-    
+
+    // CORRECCIÓN: Añadir los parámetros que faltan.
+    addMessage(message, 'user', false, null);
+
     userInput.value = '';
     userInput.style.height = 'auto';
     sendBtn.disabled = true;
-    
     showTypingIndicator();
-    
+
     fetch('chatbot.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -77,38 +71,25 @@ function sendMessage() {
     .then(res => res.text())
     .then(data => {
         hideTypingIndicator();
-        addMessage(data, 'bot');
+        // CORRECCIÓN: También aquí.
+        addMessage(data, 'bot', false, null);
     })
     .catch(error => {
         hideTypingIndicator();
-        addMessage('Lo siento, ha ocurrido un error. Por favor, inténtalo de nuevo.', 'bot', true);
+        // CORRECCIÓN: Y aquí.
+        addMessage('Lo siento, ha ocurrido un error. Por favor, inténtalo de nuevo.', 'bot', true, null);
         console.error('Error:', error);
     });
 }
 
-// --- FUNCIÓN MODIFICADA PARA MANEJAR IMÁGENES ---
-function addMessage(content, sender, isError = false) {
+function addMessage(content, sender, isError = false, time = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message-animation';
-    
-    const time = new Date().toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+
+    const messageTime = time || new Date().toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
     });
-    
-    // <-- CAMBIO/AÑADIDO: Lógica para procesar el contenido del bot
-    let finalContent = content;
-    if (sender === 'bot') {
-        // Expresión regular para buscar nuestra etiqueta [IMAGEN:...]
-        const regexImagen = /\[IMAGEN:(.*?)\]/g;
-        // Reemplazamos la etiqueta por un tag <img> de HTML
-        finalContent = content.replace(regexImagen, (match, url) => {
-            const imageUrl = url.trim();
-            // Devolvemos el HTML de la imagen. La clase es para el CSS.
-            return `<img src="${imageUrl}" class="chat-image" alt="Vista del hotel" loading="lazy">`;
-        });
-    }
-    // <-- FIN DEL CAMBIO
 
     if (sender === 'user') {
         messageDiv.innerHTML = `
@@ -117,7 +98,7 @@ function addMessage(content, sender, isError = false) {
                     <div class="bg-primary-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg">
                         <p>${content}</p> 
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 mr-2">${time}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 mr-2">${messageTime}</div>
                 </div>
                 <div class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-user text-white text-sm"></i>
@@ -125,6 +106,19 @@ function addMessage(content, sender, isError = false) {
             </div>
         `;
     } else {
+        let finalContent = content;
+        const regexImagen = /\[IMAGEN:(.*?)\]/g;
+        finalContent = finalContent.replace(regexImagen, (match, url) => {
+            return `<img src="${url.trim()}" class="chat-image" alt="Vista del hotel" loading="lazy">`;
+        });
+        
+        const isRegistroForm = finalContent.includes('id="registro-form"');
+        const isLoginForm = finalContent.includes('id="login-form"');
+
+        if (!isRegistroForm && !isLoginForm) {
+            finalContent = finalContent.replace(/\n/g, '<br>');
+        }
+
         messageDiv.innerHTML = `
             <div class="flex items-start space-x-3 mb-6">
                 <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
@@ -132,17 +126,24 @@ function addMessage(content, sender, isError = false) {
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="bg-white dark:bg-gray-800 ${isError ? 'border-red-200 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'} rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border max-w-xs sm:max-w-md lg:max-w-lg">
-                        <div class="${isError ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}">${finalContent.replace(/\n/g, '<br>')}</div>
+                        <div class="${isError ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}">
+                            ${finalContent}
+                        </div>
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-2">${time}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-2">${messageTime}</div>
                 </div>
             </div>
         `;
         // <-- CAMBIO: Usamos `finalContent` y lo envolvemos en un div en lugar de un <p> para permitir HTML (como <img>)
     }
-    
+
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const scripts = messageDiv.getElementsByTagName('script');
+    for (let i = 0; i < scripts.length; i++) {
+        new Function(scripts[i].innerText)();
+    }
 }
 
 
@@ -151,7 +152,6 @@ function showTypingIndicator() {
     const typingDiv = document.createElement('div');
     typingDiv.id = 'typing-indicator';
     typingDiv.className = 'message-animation';
-    
     typingDiv.innerHTML = `
         <div class="flex items-start space-x-3 mb-6">
             <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
@@ -168,7 +168,6 @@ function showTypingIndicator() {
             </div>
         </div>
     `;
-    
     chatMessages.appendChild(typingDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -182,42 +181,65 @@ function hideTypingIndicator() {
 }
 
 function clearChat() {
-    chatMessages.innerHTML = `
-        <div class="message-animation">
-            <div class="flex items-start space-x-3 mb-6">
-                <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-robot text-gray-600 dark:text-gray-300 text-sm"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <p class="text-gray-800 dark:text-gray-200 mb-3">¡Hola! Soy el asistente virtual del hotel. ¿En qué puedo ayudarte hoy?</p>
-                        
-                        <div class="space-y-2">
-                            <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Preguntas frecuentes:</p>
-                            <div class="flex flex-wrap gap-2">
-                                <button class="quick-question bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-full text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors" data-question="¿Qué tipos de habitaciones tienes?">
-                                    <i class="fas fa-bed mr-1"></i>
-                                    Habitaciones
-                                </button>
-                                <button class="quick-question bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-full text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors" data-question="¿Qué precios tienen las habitaciones?">
-                                    <i class="fas fa-tags mr-1"></i>
-                                    Precios
-                                </button>
-                                <button class="quick-question bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-full text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors" data-question="¿Cómo puedo contactar al hotel?">
-                                    <i class="fas fa-phone mr-1"></i>
-                                    Contacto
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-2">Ahora</div>
-                </div>
-            </div>
-        </div>
-    `;
+    fetch('api/auth/clear_chat_session.php');
+    setTimeout(() => { window.location.reload(); }, 200);
 }
 
-// Focus input on load
-document.addEventListener('DOMContentLoaded', function() {
+async function loadChatHistory() {
+    try {
+        const response = await fetch('api/chat/get_history.php');
+        const history = await response.json();
+
+        if (history.length > 0) {
+            chatMessages.innerHTML = ''; 
+            history.forEach(msg => {
+                addMessage(msg.content, msg.sender, false, msg.time);
+            });
+        }
+    } catch (error) {
+        console.error('Error al cargar el historial del chat:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
     userInput.focus();
+    loadChatHistory();
+});
+
+function actualizarHeaderUsuario(nombreUsuario) {
+    const userStatusDiv = document.getElementById('user-status');
+    if (!userStatusDiv) return;
+
+    const loggedInHTML = `
+        <div class="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center cursor-pointer" id="user-avatar-btn">
+            <i class="fas fa-user-check text-white text-xs"></i>
+        </div>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
+            ${nombreUsuario}
+        </span>
+        <div id="user-menu" class="absolute top-12 right-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Ajustes</a>
+            <a href="api/auth/logout.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Cerrar Sesión</a>
+        </div>
+    `;
+
+    userStatusDiv.innerHTML = loggedInHTML;
+    userStatusDiv.classList.add('relative');
+
+    const avatarBtn = document.getElementById('user-avatar-btn');
+    const userMenu = document.getElementById('user-menu');
+
+    if (avatarBtn && userMenu) {
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('hidden');
+        });
+    }
+}
+
+document.addEventListener('click', (e) => {
+    const userMenu = document.getElementById('user-menu');
+    if (userMenu && !userMenu.contains(e.target) && !userMenu.classList.contains('hidden')) {
+        userMenu.classList.add('hidden');
+    }
 });
