@@ -1,8 +1,6 @@
 <?php
 // En api/auth/registrar.php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once '../../app/core/session_manager.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -83,6 +81,10 @@ if ($stmt->execute()) {
     // Establecer la sesión para el nuevo usuario.
     $_SESSION['user_id'] = $id_nuevo_usuario;
     $_SESSION['user_nombre'] = $nombre_nuevo_usuario;
+
+    if (isset($_SESSION['pre_reserva'])) {
+        $_SESSION['__pre_reserva_processed'] = false;
+    }
 
     echo json_encode([
         'tipo' => 'success', 

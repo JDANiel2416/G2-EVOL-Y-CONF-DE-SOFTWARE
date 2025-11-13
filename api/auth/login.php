@@ -1,8 +1,6 @@
 <?php
 // En api/auth/login.php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start(); // Iniciar sesión para acceder a $_SESSION
-}
+require_once '../../app/core/session_manager.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -10,7 +8,7 @@ require_once '../../app/core/db.php';
 
 // --- CONFIGURACIÓN DE SEGURIDAD ---
 define('MAX_LOGIN_ATTEMPTS', 5);
-define('LOGIN_WAIT_TIME', 60);
+define('LOGIN_WAIT_TIME', 300);
 
 // Inicializar contadores si no existen
 if (!isset($_SESSION['login_attempts'])) {
@@ -20,16 +18,20 @@ if (!isset($_SESSION['login_wait_until'])) {
     $_SESSION['login_wait_until'] = 0;
 }
 
+// --- VERIFICACIÓN DE TIEMPO DE ESPERA ---
+if ($_SESSION['login_wait_until'] > 0 && time() > $_SESSION['login_wait_until']) {
+    $_SESSION['login_attempts'] = 0;
+    $_SESSION['login_wait_until'] = 0;
+}
+
 // --- PROCESO DE LOGIN ---
 
 // 1. Verificar si el usuario está bloqueado
 if ($_SESSION['login_attempts'] >= MAX_LOGIN_ATTEMPTS && time() < $_SESSION['login_wait_until']) {
-    http_response_code(429);
     $remaining = $_SESSION['login_wait_until'] - time();
+    http_response_code(429);
     echo json_encode(['tipo' => 'error', 'msg' => "Demasiados intentos. Por favor, espera {$remaining} segundos.", 'bloqueado' => true]);
     exit;
-} elseif (time() > $_SESSION['login_wait_until']) {
-    $_SESSION['login_attempts'] = 0;
 }
 
 // 2. Validar datos recibidos
@@ -71,8 +73,13 @@ if ($result->num_rows === 1) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_nombre'] = $user['nombre'];
 
+        if (isset($_SESSION['pre_reserva'])) {
+            $_SESSION['__pre_reserva_processed'] = false;
+        }
+
+        $_SESSION['login_wait_until'] = 0;
         $_SESSION['login_attempts'] = 0;
-        unset($_SESSION['login_wait_until']);
+
 
         echo json_encode([
             'tipo' => 'success',
@@ -93,6 +100,11 @@ if ($result->num_rows === 1) {
     
     $_SESSION['login_attempts']++;
     $intentos_restantes = MAX_LOGIN_ATTEMPTS - $_SESSION['login_attempts'];
+
+    if ($intentos_restantes <= 0) {
+        $_SESSION['login_wait_until'] = time() + LOGIN_WAIT_TIME;
+    }
+
     http_response_code(404);
     echo json_encode(['tipo' => 'error', 'msg' => 'Usuario o contraseña incorrectos.', 'intentos_restantes' => $intentos_restantes]);
 }

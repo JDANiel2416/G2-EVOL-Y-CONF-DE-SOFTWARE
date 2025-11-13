@@ -1,8 +1,6 @@
 <?php
 session_start();
-if (isset($_SESSION['chat_history'])) {
-    unset($_SESSION['chat_history']);
-}
-
+require_once "app/core/session_manager.php";
+// Devuelve una respuesta vacía pero exitosa
 http_response_code(200);
 ?>

@@ -162,3 +162,9 @@
     margin-top: 0.25rem;
 }
 .dark #form-timer, .dark #dni-attempts-msg { color: #9CA3AF; }
+
+/* assets/css/styles.css */
+.feedback-sent {
+    opacity: 0.6;
+    pointer-events: none;
+}

@@ -1,7 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once 'config.php';
+require_once 'app/core/session_manager.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -10,6 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hostal la Fé AI</title>
+    <base href="/adminproject/">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -21,6 +21,11 @@ if (session_status() === PHP_SESSION_NONE) {
     <script>
         tailwind.config = {
             darkMode: 'class',
+            safelist: [
+                'dark:text-gray-200', // Para el texto 'Ajustes' en modo oscuro
+                'dark:text-red-400', // Para el texto 'Cerrar Sesión' en modo oscuro
+                'dark:hover:bg-gray-600' // Para el fondo del hover en el menú en modo oscuro
+            ],
             theme: {
                 extend: {
                     fontFamily: {
@@ -38,6 +43,7 @@ if (session_status() === PHP_SESSION_NONE) {
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="font-sans bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -74,28 +80,43 @@ if (session_status() === PHP_SESSION_NONE) {
                         <i class="fas fa-broom text-lg"></i>
                     </button>
 
-                    <!-- CAMBIO/AÑADIDO: Avatar de Usuario Dinámico -->
-                    <div id="user-status"
-                        class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                    <!-- AVATAR DE USUARIO DINÁMICO (VERSIÓN FINAL) -->
+                    <div>
                         <?php if (isset($_SESSION['user_id']) && isset($_SESSION['user_nombre'])): ?>
-                        <!-- Vista para usuario logueado -->
-                        <div class="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user-check text-white text-xs"></i>
-                        </div>
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
-                            <?php echo htmlspecialchars($_SESSION['user_nombre']); ?>
-                        </span>
-                        <a href="api/auth/logout.php" title="Cerrar Sesión"
-                            class="ml-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
+                            <!-- VISTA PARA USUARIO LOGUEADO -->
+                            <div class="relative">
+
+                                <!-- 1. EL BOTÓN QUE ABRE EL MENÚ -->
+                                <button id="user-avatar-btn" class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user-check text-white text-xs"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
+                                        <?php echo htmlspecialchars($_SESSION['user_nombre']); ?>
+                                    </span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400 ml-1"></i>
+                                </button> <!-- <<-- EL BOTÓN TERMINA AQUÍ -->
+
+                                <!-- 2. EL MENÚ DESPLEGABLE (HERMANO DEL BOTÓN, NO HIJO) -->
+                                <div id="user-menu" class="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden ring-1 ring-black ring-opacity-5">
+                                    <a href="#" class="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <i class="fas fa-cog w-4 mr-2"></i>Ajustes
+                                    </a>
+                                    <a href="api/auth/logout.php" class="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <i class="fas fa-sign-out-alt w-4 mr-2"></i>Cerrar Sesión
+                                    </a>
+                                </div>
+
+                            </div>
+
                         <?php else: ?>
-                        <!-- Vista para visitante -->
-                        <div class="w-6 h-6 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user-alt-slash text-white text-xs"></i>
-                        </div>
-                        <span
-                            class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">Visitante</span>
+                            <!-- VISTA PARA VISITANTE (Esta parte no cambia) -->
+                            <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                                <div class="w-6 h-6 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user-alt-slash text-white text-xs"></i>
+                                </div>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">Visitante</span>
+                            </div>
                         <?php endif; ?>
                     </div>
 
@@ -126,19 +147,19 @@ if (session_status() === PHP_SESSION_NONE) {
                                         esto:</p>
                                     <div class="flex flex-wrap gap-2">
                                         <?php if (!isset($_SESSION['user_id'])): ?>
-                                        <!-- ESTOS BOTONES SOLO SE MUESTRAN SI EL USUARIO NO ESTÁ LOGUEADO -->
-                                        <button
-                                            class="quick-question bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-full text-sm hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
-                                            data-question="Quiero crear una cuenta">
-                                            <i class="fas fa-user-plus mr-1"></i>
-                                            Registrarme
-                                        </button>
-                                        <button
-                                            class="quick-question bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-full text-sm hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
-                                            data-question="Quiero iniciar sesión">
-                                            <i class="fas fa-sign-in-alt mr-1"></i>
-                                            Iniciar Sesión
-                                        </button>
+                                            <!-- ESTOS BOTONES SOLO SE MUESTRAN SI EL USUARIO NO ESTÁ LOGUEADO -->
+                                            <button
+                                                class="quick-question bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-full text-sm hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
+                                                data-question="Quiero crear una cuenta">
+                                                <i class="fas fa-user-plus mr-1"></i>
+                                                Registrarme
+                                            </button>
+                                            <button
+                                                class="quick-question bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-full text-sm hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
+                                                data-question="Quiero iniciar sesión">
+                                                <i class="fas fa-sign-in-alt mr-1"></i>
+                                                Iniciar Sesión
+                                            </button>
                                         <?php endif; ?>
 
                                         <!-- ESTOS BOTONES SIEMPRE SE MUESTRAN -->
@@ -185,10 +206,38 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 
     <!-- Custom JS -->
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/auth-form.js"></script>
-    <!-- SCRIPT DE CLOUDFLARE TURNSTILE (CAPTCHA) -->
+
+    <!-- 1. SCRIPT DE CLOUDFLARE (no depende de nada, puede ir aquí) -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <!-- 2. SDK DE MERCADO PAGO (debe cargarse antes de que main.js lo use) -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+
+    <!-- 3. DEFINICIÓN DE VARIABLES GLOBALES (como la clave pública) -->
+    <script>
+        const MP_PUBLIC_KEY = "<?php echo MP_PUBLIC_KEY; ?>";
+
+        // --- AÑADIR ESTE BLOQUE ---
+        // Inyectamos las palabras clave de PHP a JavaScript
+        <?php
+        $palabras_clave_login = ['iniciar sesión', 'iniciar sesion', 'login', 'entrar', 'acceder', 'loguear', 'loguearme'];
+        $palabras_clave_registro = ['registrarme', 'registro', 'crear una cuenta', 'inscribirme'];
+        $palabras_clave_recuperar = ['olvidé mi contraseña', 'olvide mi contraseña', 'olvide mi clave', 'olvidé mi clave', 'recuperar contraseña', 'no puedo entrar', 'restablecer clave', 'olvidé la clave', 'contraseña', 'clave'];
+
+        // Combinamos todas las frases que disparan un formulario o una acción interna
+        $formTriggerPhrases = array_merge($palabras_clave_login, $palabras_clave_registro, $palabras_clave_recuperar);
+        $formTriggerPhrases[] = '[internal] initiate-payment';
+        $formTriggerPhrases[] = '[internal] request-login';
+        ?>
+        // Convertimos el array de PHP a un array de JavaScript
+        const FORM_TRIGGER_PHRASES = <?php echo json_encode($formTriggerPhrases); ?>;
+        // --- FIN DEL BLOQUE AÑADIDO ---
+    </script>
+
+
+    <!-- 4. TU SCRIPT PRINCIPAL (se carga al final para que pueda ver todo lo anterior) -->
+    <script src="assets/js/main.js"></script>
+
 </body>
 
 </html>
