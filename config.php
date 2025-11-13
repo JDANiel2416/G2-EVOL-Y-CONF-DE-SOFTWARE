@@ -13,7 +13,7 @@ define('DB_PORT', 3307);
 define('RUTA_PRINCIPAL', 'http://localhost/adminproject/'); // ¡Importante!
 
 // --- CREDENCIALES DE API ---
-define('GEMINI_API_KEY', 'AIzaSyAdo1i2V1qKC5sxzPARMQqVzFk-hiSs5Ek'); // Tu clave de Gemini
+define('GEMINI_API_KEY', ''); // Tu clave de Gemini
 define('GEMINI_MODEL', 'gemini-2.0-flash');
 
 // --- CONFIGURACIÓN DE CORREO (PHPMAILER) ---
